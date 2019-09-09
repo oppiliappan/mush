@@ -11,8 +11,36 @@ use rustyline::config::{ Builder, Config, CompletionType, EditMode };
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 
+use serde::Deserialize;
+
+use lazy_static::lazy_static;
+
+#[derive(Deserialize)]
+struct ClientConfig {
+    ip: Ipv4Addr,
+    port: Option<u16>,
+}
+
+impl ClientConfig {
+    fn new() -> ClientConfig {
+        return ClientConfig {
+            ip: Ipv4Addr::new(127, 0, 0, 1),
+            port: Some(6600)
+        };
+    }
+    fn socket_addr(&self) -> SocketAddr {
+        return SocketAddr::new(IpAddr::V4(self.ip), self.port.unwrap_or(6600));
+    }
+}
+
+lazy_static! {
+    static ref CONFIGURATION: ClientConfig = read_config();
+}
+
 fn main() {
-    let mut conn = Client::connect("127.0.0.1:6600").unwrap();
+
+    let socket = CONFIGURATION.socket_addr();
+    let mut conn = Client::connect(socket).unwrap();
 
     let line_config: Config = Builder::new()
         .max_history_size(100)
@@ -75,4 +103,25 @@ fn now_playing(conn: &mut Client) -> Option<String> {
         }
         _ => None
     }
+}
+
+fn read_config() -> ClientConfig {
+    let mut mush_config_path = PathBuf::new();
+
+    if let Some(mush_dirs) = BaseDirs::new() {
+        mush_config_path.push(mush_dirs.config_dir());
+        mush_config_path.push("mush");
+        mush_config_path.set_extension("toml");
+    } else {
+        panic!("No home directory found!");
+    }
+
+    let mut configuration = ClientConfig::new();
+
+    let config_file_contents = std::fs::read_to_string(mush_config_path);
+    match config_file_contents.as_ref()  {
+        Ok(c) => configuration = toml::from_str(c).unwrap(),
+        _ => {}
+    };
+    return configuration;
 }
