@@ -1,5 +1,11 @@
+use std::path::PathBuf;
+use std::net::{ IpAddr, Ipv4Addr, SocketAddr };
+use std::fs::{ OpenOptions };
+
 use mpd::Client;
 use mpd::status::{ Status, State };
+
+use directories::BaseDirs;
 
 use rustyline::config::{ Builder, Config, CompletionType, EditMode };
 use rustyline::Editor;

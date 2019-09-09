@@ -9,3 +9,10 @@ edition = "2018"
 [dependencies]
 mpd = "*"
 rustyline = "5.0.2"
+toml = "0.5.3"
+directories = "2.0.2"
+lazy_static = "1.4.0"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
