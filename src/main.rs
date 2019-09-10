@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::net::{ IpAddr, Ipv4Addr, SocketAddr };
-use std::fs::{ OpenOptions };
+use std::fs;
 
 use mpd::Client;
 use mpd::status::{ Status, State };
@@ -15,7 +15,7 @@ use serde::Deserialize;
 
 use lazy_static::lazy_static;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ClientConfig {
     ip: Ipv4Addr,
     port: Option<u16>,
@@ -111,17 +111,22 @@ fn read_config() -> ClientConfig {
     if let Some(mush_dirs) = BaseDirs::new() {
         mush_config_path.push(mush_dirs.config_dir());
         mush_config_path.push("mush");
-        mush_config_path.set_extension("toml");
+        fs::create_dir_all(&mush_config_path).unwrap();
+        mush_config_path.push("config.toml");
     } else {
         panic!("No home directory found!");
     }
+
 
     let mut configuration = ClientConfig::new();
 
     let config_file_contents = std::fs::read_to_string(mush_config_path);
     match config_file_contents.as_ref()  {
-        Ok(c) => configuration = toml::from_str(c).unwrap(),
+        Ok(c) => {
+            configuration = toml::from_str(c).unwrap();
+        },
         _ => {}
     };
+    println!("{:?}", configuration);
     return configuration;
 }
