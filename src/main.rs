@@ -4,16 +4,21 @@ use std::fs;
 
 use mpd::Client;
 use mpd::status::{ Status, State };
+use mpd::search::{ Query, Term, Window };
 
 use directories::BaseDirs;
+use serde::Deserialize;
+use lazy_static::lazy_static;
 
-use rustyline::config::{ Builder, Config, CompletionType, EditMode };
-use rustyline::Editor;
+mod readline;
+use crate::readline::*;
 use rustyline::error::ReadlineError;
 
-use serde::Deserialize;
+mod lexer;
+use crate::lexer::*;
 
-use lazy_static::lazy_static;
+mod parser;
+use crate::parser::*;
 
 #[derive(Deserialize, Debug)]
 struct ClientConfig {
@@ -38,18 +43,9 @@ lazy_static! {
 }
 
 fn main() {
-
     let socket = CONFIGURATION.socket_addr();
     let mut conn = Client::connect(socket).unwrap();
-
-    let line_config: Config = Builder::new()
-        .max_history_size(100)
-        .history_ignore_dups(true)
-        .history_ignore_space(true)
-        .completion_type(CompletionType::Circular)
-        .edit_mode(EditMode::Emacs)
-        .build();
-    let mut rl = Editor::<()>::with_config(line_config);
+    let mut rl = create_readline();
 
     loop {
         let line_read = rl.readline("> ");
@@ -73,20 +69,23 @@ fn main() {
     }
 }
 
+// TODO: commands to handle
+// play
+// pause
+// stop
+// fade
+// next
+// prev
+// repeat
+// now playing
+//
+// Queue:
+// add to queue
+//
+
 fn handler(line: String, conn: &mut Client) {
-    let parts: Vec<&str> = (&line).split(' ').collect();
-    match *parts.first().unwrap() {
-        "play" => {
-            conn.toggle_pause().unwrap();
-            println!("{}", now_playing(conn).unwrap());
-        }
-        "pause" => {
-            conn.pause(true).unwrap();
-            println!("{}", now_playing(conn).unwrap());
-        },
-        "stop" => conn.stop().unwrap(),
-        _ => {}
-    }
+    let token: lexer::Command = lexer::lex(&line);
+    println!("{:#?}", token);
 }
 
 fn now_playing(conn: &mut Client) -> Option<String> {
@@ -94,15 +93,26 @@ fn now_playing(conn: &mut Client) -> Option<String> {
     match song_wrapped {
         Ok(song) => {
             if let Some(s) = song {
-                let title  = s.title.unwrap_or("N/A".into());
-                let artist = s.tags.get("Artist");
-                let album  = s.tags.get("Album");
-                return Some(format!("{} // {} // {}",
-                                    artist.unwrap(), album.unwrap(), title));
+                // let title  = s.title.unwrap_or("N/A".into());
+                // let artist = s.tags.get("Artist");
+                // let album  = s.tags.get("Album");
+                // return Some(format!("{} // {} // {}",
+                //                     artist.unwrap(), album.unwrap(), title));
+                return Some(format!("{:#?}", s));
             } else { None }
         }
         _ => None
     }
+}
+
+fn list_all(conn: &mut Client, query_text: &str) -> Vec<String> {
+    let mut q = Query::new();
+    let p = q.and(Term::File, query_text);
+    let results = conn.search(&p, (1, 10)).unwrap();
+    let songs: Vec<String> = results.iter()
+        .map(|x| format!("{:?}", x))
+        .collect();
+    return songs;
 }
 
 fn read_config() -> ClientConfig {
@@ -116,7 +126,6 @@ fn read_config() -> ClientConfig {
     } else {
         panic!("No home directory found!");
     }
-
 
     let mut configuration = ClientConfig::new();
 
