@@ -32,7 +32,10 @@ fn list(conn: &mut Client) {
                     Some(s) => s,
                     None => "N/A"
                 };
-                let title = song.title.map_or_else(|| "N/A", |x| &&x);
+                let title = match song.title {
+                    Some(ref x) => x.clone(),
+                    None => "N/A".into()
+                };
                 println!("{} // {} // {}", artist, album, title);
             }
         }
