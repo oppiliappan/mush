@@ -19,14 +19,26 @@ fn play(&mut conn: Client, args: Option<Vec<String>>) -> Result<()> {
 
 }
 
-lazy_static! {
-    static ref FUNCTIONS: HashMap<&'static str,
-    fn(&mut Client, Option<Vec<String>>) -> Result<()>> = {
-        let mut f = HashMap::new();
-        f.insert("play"  , play);
-        f.insert("pause" , pause);
-        f.insert("stop"  , stop);
-        f.insert("add"   , add);
+fn list(conn: &mut Client) {
+    let queue = conn.queue();
+    match queue {
+        Ok(songs) => {
+            for song in songs.iter() {
+                let artist = match song.tags.get("Artist") {
+                    Some(s) => s,
+                    None => "N/A"
+                };
+                let album = match song.tags.get("Album") {
+                    Some(s) => s,
+                    None => "N/A"
+                };
+                let title = song.title.map_or_else(|| "N/A", |x| &&x);
+                println!("{} // {} // {}", artist, album, title);
+            }
+        }
+        Err(_) => {
+            println!("Unable to print songs in queue.");
+        }
     }
 }
 
