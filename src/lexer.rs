@@ -1,19 +1,21 @@
 #[derive(Debug)]
 pub struct Command {
     command: Option<String>,
-    args: Option<Vec<String>>
+    args: Option<String>
 }
 
 pub fn lex(input: &str) -> Command {
-    let parts = input.split(' ').collect::<Vec<&str>>();
+    let parts = input.splitn(2, ' ').collect::<Vec<&str>>();
     let mut parts_iter = parts.iter();
-    let command = parts_iter.next().map(|&x| String::from(x.clone()));
-    let args: Vec<String> = parts_iter.map(|&x| x.to_string()).collect();
-    if args.len() != 0 {
+
+    let command = parts_iter.next().map(|x| x.to_string());
+    let args = parts_iter.last();
+
+    if let Some(a) = args {
         return Command {
-            command,
-            args: Some(args)
-        };
+            command: command,
+            args: Some(a.to_string())
+        }
     } else {
         return Command {
             command,
