@@ -19,8 +19,8 @@ fn search(conn: &mut Client, query_text: &str) -> Vec<Song> {
 fn play(conn: &mut Client, args: Option<String>) {
     match args {
         Some(a) => {
-            let song_path = Box::new(args.unwrap());
-            conn.push(*song_path);
+            let song_path = a;
+            conn.push(song_path);
         },
         None => {
             conn.toggle_pause().unwrap();
